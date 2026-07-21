@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carbon Footprint Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="container">
+        <h1>Carbon Footprint Calculator</h1>
+        <p class="subtitle">Enter your daily activity values to calculate your estimated CO2.</p>
+
+        {% if error %}
+          <div class="alert" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <form class="card" action="{{ url_for('calculate') }}" method="POST">
+          <label for="name">Name</label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="Your name"
+            required
+            value="{{ form_values.get('name','') }}"
+          />
+
+          <label for="transport_type">Transport type</label>
+          <select id="transport_type" name="transport_type" required>
+            <option value="car" {% if form_values.get('transport_type') == 'car' %}selected{% endif %}>car</option>
+            <option value="bike" {% if form_values.get('transport_type') == 'bike' %}selected{% endif %}>bike</option>
+            <option value="bus" {% if form_values.get('transport_type') == 'bus' %}selected{% endif %}>bus</option>
+            <option value="walk" {% if form_values.get('transport_type') == 'walk' %}selected{% endif %}>walk</option>
+          </select>
+
+          <label for="distance">Distance (km)</label>
+          <input
+            id="distance"
+            name="distance"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="e.g., 10"
+            required
+            value="{{ form_values.get('distance','') }}"
+          />
+
+          <label for="electricity_usage">Electricity usage (units)</label>
+          <input
+            id="electricity_usage"
+            name="electricity_usage"
+            type="number"
+            step="0.1"
+            min="0"
+            placeholder="e.g., 8"
+            required
+            value="{{ form_values.get('electricity_usage','') }}"
+          />
+
+          <label for="diet_type">Diet type</label>
+          <select id="diet_type" name="diet_type" required>
+            <option value="veg" {% if form_values.get('diet_type') == 'veg' %}selected{% endif %}>veg</option>
+            <option value="non-veg" {% if form_values.get('diet_type') == 'non-veg' %}selected{% endif %}>non-veg</option>
+          </select>
+
+          <button type="submit">Calculate</button>
+        </form>
+
+        <div class="link-row">
+          <a class="link" href="{{ url_for('history') }}">View History</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

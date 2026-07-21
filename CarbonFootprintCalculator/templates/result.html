@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carbon Footprint Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="container">
+        <h1>Your Result</h1>
+        <p class="subtitle">Estimated total carbon emission for today.</p>
+
+        <div class="card result-card">
+          <div class="result-header">
+            <div class="result-title">
+              Category: <span class="badge badge-{{ category|lower }}">{{ category }}</span>
+            </div>
+            <div class="result-emission">{{ total_emission }} kg CO2</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid">
+            <div><strong>Name:</strong> {{ name }}</div>
+            <div><strong>Transport:</strong> {{ transport_type }}</div>
+            <div><strong>Distance:</strong> {{ distance }} km</div>
+            <div><strong>Electricity:</strong> {{ electricity_usage }} units</div>
+            <div><strong>Diet:</strong> {{ diet_type }}</div>
+            <div><strong>Total Emission:</strong> {{ total_emission }} kg CO2</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a class="button" href="{{ url_for('home') }}">Calculate Again</a>
+          <a class="button secondary" href="{{ url_for('history') }}">View History</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
