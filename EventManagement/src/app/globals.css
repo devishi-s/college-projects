@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --blush: #f7d6de;
+  --cream: #fff8f4;
+  --sidebar: #fceef2;
+  --rose: #d97b8c;
+  --rose-deep: #a84d5e;
+  --mint: #b8e0c8;
+  --ink: #4a3038;
+  --ink-soft: #7a5a64;
+  --card: #fffdfb;
+  --grid-line: rgba(168, 77, 94, 0.08);
+  --background: var(--blush);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+body {
+  background-color: var(--blush);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+.cute-card {
+  border: 3px solid var(--ink);
+  border-radius: 1.5rem;
+  background: var(--card);
+  box-shadow: 4px 4px 0 var(--rose);
+}
+
+.cute-btn {
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--rose);
+  color: white;
+  font-weight: 700;
+  padding: 0.55rem 1.25rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cute-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.cute-btn-outline {
+  border: 2.5px solid var(--rose);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--rose-deep);
+  font-weight: 700;
+  padding: 0.55rem 1.25rem;
+}
