@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { uploadRecapPhotos } from "@/lib/supabase/storage";
+import { isEventCompleted } from "@/lib/types";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -147,6 +149,77 @@ export async function deleteEventAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/events");
+  revalidatePath("/feed");
+  return { error: null };
+}
+
+export async function saveEventRecapAction(formData: FormData) {
+  const { supabase, error, user } = await requireAdmin();
+  if (error || !user) return { error };
+
+  const id = String(formData.get("id") ?? "");
+  const recap_description = String(
+    formData.get("recap_description") ?? "",
+  ).trim();
+  const keptRaw = String(formData.get("kept_photo_urls") ?? "[]");
+
+  if (!id) return { error: "Missing event id." };
+  if (!recap_description) {
+    return { error: "Recap description is required to publish on the Feed." };
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("events")
+    .select("id, starts_at, recap_posted_at")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) {
+    return { error: fetchError?.message ?? "Event not found." };
+  }
+
+  if (!isEventCompleted(existing.starts_at)) {
+    return { error: "Recaps can only be added after the event has started." };
+  }
+
+  let kept: string[] = [];
+  try {
+    const parsed = JSON.parse(keptRaw) as unknown;
+    if (Array.isArray(parsed)) {
+      kept = parsed.filter((u): u is string => typeof u === "string");
+    }
+  } catch {
+    return { error: "Invalid photo list." };
+  }
+
+  const uploads = formData
+    .getAll("photos")
+    .filter((f): f is File => f instanceof File);
+  const { urls: newUrls, error: uploadError } = await uploadRecapPhotos(
+    supabase,
+    id,
+    uploads,
+  );
+  if (uploadError) return { error: uploadError };
+
+  const recap_photo_urls = [...kept, ...newUrls];
+  const patch = {
+    recap_description,
+    recap_photo_urls,
+    recap_posted_at: existing.recap_posted_at ?? new Date().toISOString(),
+  };
+
+  const { error: updateError } = await supabase
+    .from("events")
+    .update(patch)
+    .eq("id", id);
+
+  if (updateError) return { error: updateError.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/feed");
+  revalidatePath("/events");
+  revalidatePath(`/events/${id}`);
   return { error: null };
 }
 

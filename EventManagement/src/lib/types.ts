@@ -31,9 +31,12 @@ export type EventRow = {
   banner_path: string | null;
   capacity: number | null;
   created_at: string;
+  recap_description: string | null;
+  recap_photo_urls: string[] | null;
+  recap_posted_at: string | null;
   societies?: Pick<
     Society,
-    "id" | "slug" | "name" | "soft" | "deep" | "accent"
+    "id" | "slug" | "name" | "soft" | "deep" | "accent" | "logo_path"
   > | null;
   registration_count?: number;
 };
@@ -59,4 +62,14 @@ export function publicStorageUrl(
 
 export function isEventCompleted(startsAt: string) {
   return new Date(startsAt).getTime() < Date.now();
+}
+
+/** Feed eligibility: recap text present and event start time has passed. */
+export function hasRecap(
+  event: Pick<EventRow, "recap_description" | "starts_at">,
+) {
+  return (
+    Boolean(event.recap_description?.trim()) &&
+    isEventCompleted(event.starts_at)
+  );
 }

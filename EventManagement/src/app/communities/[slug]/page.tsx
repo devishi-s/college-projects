@@ -4,6 +4,7 @@ import {
   PresidentCharacter,
   VicePresidentCharacter,
 } from "@/components/characters/LeaderPlaceholders";
+import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
 import { getSociety } from "@/lib/societies";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -101,9 +102,9 @@ export default async function SocietyDetailPage({ params }: Props) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${society.name} on Instagram`}
-                className="flex h-9 w-9 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-xs font-extrabold"
+                className="flex h-9 w-9 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-[var(--rose-deep)]"
               >
-                IG
+                <InstagramIcon className="h-5 w-5" />
               </a>
             )}
             {society.linkedin_url && (
@@ -112,9 +113,9 @@ export default async function SocietyDetailPage({ params }: Props) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${society.name} on LinkedIn`}
-                className="flex h-9 w-9 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-xs font-extrabold"
+                className="flex h-9 w-9 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-[var(--rose-deep)]"
               >
-                in
+                <LinkedInIcon className="h-5 w-5" />
               </a>
             )}
           </div>

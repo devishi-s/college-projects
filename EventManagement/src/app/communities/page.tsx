@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SOCIETIES } from "@/lib/societies";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
 import { publicStorageUrl, type Society } from "@/lib/types";
 
 export default async function CommunitiesPage() {
@@ -102,16 +103,16 @@ export default async function CommunitiesPage() {
                   </p>
                 </div>
               </Link>
-              <div className="flex items-center gap-2 px-5 pb-5">
+              <div className="flex items-center justify-center gap-2 px-5 pb-5">
                 {society.instagram_url && (
                   <a
                     href={society.instagram_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${society.name} on Instagram`}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-xs font-extrabold text-[var(--rose-deep)]"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-[var(--rose-deep)]"
                   >
-                    IG
+                    <InstagramIcon className="h-4 w-4" />
                   </a>
                 )}
                 {society.linkedin_url && (
@@ -120,14 +121,14 @@ export default async function CommunitiesPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${society.name} on LinkedIn`}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-xs font-extrabold text-[var(--rose-deep)]"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-white text-[var(--rose-deep)]"
                   >
-                    in
+                    <LinkedInIcon className="h-4 w-4" />
                   </a>
                 )}
                 <Link
                   href={`/communities/${society.slug}`}
-                  className="cute-btn-outline ml-auto text-sm"
+                  className="cute-btn-outline text-sm"
                 >
                   View Society
                 </Link>

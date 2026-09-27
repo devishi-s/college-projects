@@ -7,8 +7,9 @@ import {
   deleteEventAction,
   updateSocietyAction,
 } from "@/app/admin/actions";
+import { EventRecapEditor } from "@/components/admin/EventRecapEditor";
 import type { EventRegistration, EventRow, Society } from "@/lib/types";
-import { publicStorageUrl } from "@/lib/types";
+import { isEventCompleted, publicStorageUrl } from "@/lib/types";
 
 type Stats = {
   societies: number;
@@ -347,49 +348,62 @@ export function AdminPanel({
                   "event-banners",
                   event.banner_path,
                 );
+                const past = isEventCompleted(event.starts_at);
                 return (
                   <div
                     key={event.id}
-                    className="cute-card flex items-center gap-4 p-4"
+                    className="cute-card flex flex-col gap-0 p-4"
                   >
-                    <div className="h-16 w-24 overflow-hidden rounded-xl border-[2px] border-[var(--ink)] bg-[var(--sidebar)]">
-                      {bannerUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={bannerUrl}
-                          alt={`${event.title} event banner`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-extrabold">{event.title}</p>
-                      <p className="text-xs text-[var(--ink-soft)]">
-                        {event.societies?.name ?? "Society"} ·{" "}
-                        {new Date(event.starts_at).toLocaleString()}
-                        {event.capacity != null
-                          ? ` · capacity ${event.capacity}`
-                          : ""}
-                      </p>
-                    </div>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        run(
-                          deleteEventAction,
-                          new FormData(e.currentTarget),
-                          "Event deleted.",
-                        );
-                      }}
-                    >
-                      <input type="hidden" name="id" value={event.id} />
-                      <button
-                        type="submit"
-                        className="rounded-full border-[2px] border-[var(--ink)] px-3 py-1 text-xs font-bold text-[var(--rose-deep)]"
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-24 overflow-hidden rounded-xl border-[2px] border-[var(--ink)] bg-[var(--sidebar)]">
+                        {bannerUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={bannerUrl}
+                            alt={`${event.title} event banner`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-extrabold">{event.title}</p>
+                        <p className="text-xs text-[var(--ink-soft)]">
+                          {event.societies?.name ?? "Society"} ·{" "}
+                          {new Date(event.starts_at).toLocaleString()}
+                          {event.capacity != null
+                            ? ` · capacity ${event.capacity}`
+                            : ""}
+                          {past ? " · past" : ""}
+                          {event.recap_description ? " · recap live" : ""}
+                        </p>
+                      </div>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          run(
+                            deleteEventAction,
+                            new FormData(e.currentTarget),
+                            "Event deleted.",
+                          );
+                        }}
                       >
-                        Delete
-                      </button>
-                    </form>
+                        <input type="hidden" name="id" value={event.id} />
+                        <button
+                          type="submit"
+                          className="rounded-full border-[2px] border-[var(--ink)] px-3 py-1 text-xs font-bold text-[var(--rose-deep)]"
+                        >
+                          Delete
+                        </button>
+                      </form>
+                    </div>
+
+                    {past && (
+                      <EventRecapEditor
+                        event={event}
+                        pending={pending}
+                        onSave={run}
+                      />
+                    )}
                   </div>
                 );
               })}

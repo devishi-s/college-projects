@@ -16,7 +16,20 @@ type Props = {
   societies: Pick<Society, "id" | "slug" | "name">[];
 };
 
-type SortMode = "upcoming" | "recent";
+type SortMode =
+  | "upcoming"
+  | "date-desc"
+  | "date-asc"
+  | "name-asc"
+  | "popular";
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "upcoming", label: "Upcoming first" },
+  { value: "date-desc", label: "Date · newest first" },
+  { value: "date-asc", label: "Date · oldest first" },
+  { value: "name-asc", label: "Name · A to Z" },
+  { value: "popular", label: "Most registered" },
+];
 
 export function EventsExplorer({ events, societies }: Props) {
   const [societyId, setSocietyId] = useState<string>("all");
@@ -35,7 +48,21 @@ export function EventsExplorer({ events, societies }: Props) {
     list = [...list].sort((a, b) => {
       const ta = new Date(a.starts_at).getTime();
       const tb = new Date(b.starts_at).getTime();
-      if (sort === "recent") return tb - ta;
+
+      if (sort === "date-desc") return tb - ta;
+      if (sort === "date-asc") return ta - tb;
+      if (sort === "name-asc") {
+        return a.title.localeCompare(b.title, undefined, {
+          sensitivity: "base",
+        });
+      }
+      if (sort === "popular") {
+        const ca = a.registration_count ?? 0;
+        const cb = b.registration_count ?? 0;
+        if (cb !== ca) return cb - ca;
+        return ta - tb;
+      }
+
       // upcoming first: future events soonest, then past (newest past last)
       const now = Date.now();
       const aPast = ta < now;
@@ -75,14 +102,17 @@ export function EventsExplorer({ events, societies }: Props) {
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs font-bold">
-          Sort
+          Sort by
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortMode)}
-            className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 text-sm font-normal"
+            className="min-w-[11.5rem] rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 text-sm font-normal"
           >
-            <option value="upcoming">Upcoming first</option>
-            <option value="recent">Most recent</option>
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </label>
       </div>
