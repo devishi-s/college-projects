@@ -1,6 +1,6 @@
 # CampusHub — Delhi Technical Campus
 
-Cute event management hub for CS clubs (Next.js + Supabase). Desktop-first; no deploy required for the college project.
+An event management hub for CS clubs (Next.js + Supabase). Desktop-first; no deploy required for the college project.
 
 ## Quick start
 
