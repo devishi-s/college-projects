@@ -25,7 +25,7 @@ export default async function FeedPage() {
     });
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <h1 className="font-[family-name:var(--font-display)] text-4xl text-[var(--rose-deep)]">
         Feed
       </h1>

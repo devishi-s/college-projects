@@ -21,7 +21,7 @@ export function FeedCard({ event }: Props) {
 
   return (
     <motion.article
-      className="cute-card overflow-hidden p-6"
+      className="cute-card overflow-hidden p-7"
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}
     >
@@ -82,8 +82,13 @@ export function FeedCard({ event }: Props) {
         <PhotoGallery
           urls={photos}
           altPrefix={`${event.title} recap`}
-          className="mt-4"
+          className="mt-5"
         />
+      )}
+      {photos.length === 0 && event.recap_description && (
+        <p className="mt-4 text-xs font-semibold text-[var(--ink-soft)]">
+          No photos on this recap yet — add them from Admin → Events.
+        </p>
       )}
 
       <p className="mt-4 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">

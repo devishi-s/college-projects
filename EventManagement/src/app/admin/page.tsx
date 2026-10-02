@@ -15,7 +15,7 @@ export default async function AdminPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_admin, full_name")
+    .select("is_admin")
     .eq("id", user.id)
     .single();
 
@@ -38,29 +38,41 @@ export default async function AdminPage() {
     );
   }
 
+  // One parallel round-trip: drop separate count queries (use array lengths)
+  // and fetch profiles alongside registrations (no sequential second hop).
   const [
     { data: societies },
     { data: events },
-    { data: registrations },
-    { count: societyCount },
-    { count: eventCount },
-    { count: regCount },
+    { data: registrationRows },
+    { data: profileRows },
   ] = await Promise.all([
     supabase.from("societies").select("*").order("name"),
     supabase
       .from("events")
-      .select("*, societies(id, slug, name, soft, deep, accent)")
+      .select(
+        "id, society_id, title, description, venue, starts_at, banner_path, capacity, created_at, recap_description, recap_photo_urls, recap_posted_at, societies(id, slug, name, soft, deep, accent)",
+      )
       .order("starts_at", { ascending: true }),
     supabase
       .from("event_registrations")
-      .select("*, profiles(id, full_name), events(id, title)")
+      .select("id, event_id, user_id, created_at, events(id, title)")
       .order("created_at", { ascending: false }),
-    supabase.from("societies").select("*", { count: "exact", head: true }),
-    supabase.from("events").select("*", { count: "exact", head: true }),
     supabase
-      .from("event_registrations")
-      .select("*", { count: "exact", head: true }),
+      .from("profiles")
+      .select("id, full_name, enrollment_no, batch, course, year"),
   ]);
+
+  const profileMap = new Map(
+    (profileRows ?? []).map((p) => [p.id, p] as const),
+  );
+
+  const registrations = (registrationRows ?? []).map((r) => ({
+    ...r,
+    profiles: profileMap.get(r.user_id) ?? null,
+  }));
+
+  const societyList = (societies ?? []) as unknown as Society[];
+  const eventList = (events ?? []) as unknown as EventRow[];
 
   return (
     <div>
@@ -81,17 +93,17 @@ export default async function AdminPage() {
       </div>
 
       <AdminPanel
-        societies={(societies ?? []) as Society[]}
-        events={(events ?? []) as EventRow[]}
+        societies={societyList}
+        events={eventList}
         registrations={
-          (registrations ?? []) as (EventRegistration & {
+          registrations as unknown as (EventRegistration & {
             events?: { id: string; title: string } | null;
           })[]
         }
         stats={{
-          societies: societyCount ?? 0,
-          events: eventCount ?? 0,
-          registrations: regCount ?? 0,
+          societies: societyList.length,
+          events: eventList.length,
+          registrations: registrations.length,
         }}
       />
 

@@ -1,21 +1,35 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SOCIETIES } from "@/lib/societies";
+import { JoinCommunityButton } from "@/components/communities/JoinCommunityButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
-import { publicStorageUrl, type Society } from "@/lib/types";
+import { publicStorageUrl, societyMemberTotal, type Society } from "@/lib/types";
 
 export default async function CommunitiesPage() {
   const supabase = await createClient();
-  const [{ data }, { data: eventRows }] = await Promise.all([
-    supabase.from("societies").select("*").order("name"),
-    supabase.from("events").select("society_id"),
-  ]);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ data }, { data: eventRows }, { data: memberRows }] =
+    await Promise.all([
+      supabase.from("societies").select("*").order("name"),
+      supabase.from("events").select("society_id"),
+      supabase.from("society_members").select("society_id, user_id"),
+    ]);
 
   const societies = (data as Society[] | null) ?? [];
   const hosted = new Map<string, number>();
   for (const e of eventRows ?? []) {
     hosted.set(e.society_id, (hosted.get(e.society_id) ?? 0) + 1);
+  }
+
+  const memberCounts = new Map<string, number>();
+  const joinedIds = new Set<string>();
+  for (const m of memberRows ?? []) {
+    memberCounts.set(m.society_id, (memberCounts.get(m.society_id) ?? 0) + 1);
+    if (user && m.user_id === user.id) joinedIds.add(m.society_id);
   }
 
   const list =
@@ -52,6 +66,8 @@ export default async function CommunitiesPage() {
     );
   }
 
+  const fromDb = societies.length > 0;
+
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-[family-name:var(--font-display)] text-4xl text-[var(--rose-deep)]">
@@ -65,6 +81,9 @@ export default async function CommunitiesPage() {
         {list.map((society) => {
           const logoUrl = publicStorageUrl("society-logos", society.logo_path);
           const eventsHosted = hosted.get(society.id) ?? 0;
+          const members = societyMemberTotal(
+            memberCounts.get(society.id) ?? 0,
+          );
           return (
             <article
               key={society.slug}
@@ -98,12 +117,17 @@ export default async function CommunitiesPage() {
                   <p className="mt-1 line-clamp-2 text-sm text-[var(--ink-soft)]">
                     {society.tagline}
                   </p>
-                  <p className="mt-3 rounded-full border-[2px] border-[var(--ink)] bg-[var(--sidebar)] px-3 py-1 text-center text-xs font-bold">
-                    {eventsHosted} event{eventsHosted === 1 ? "" : "s"} hosted
-                  </p>
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    <p className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--sidebar)] px-3 py-1 text-center text-xs font-bold">
+                      {eventsHosted} event{eventsHosted === 1 ? "" : "s"} hosted
+                    </p>
+                    <p className="rounded-full border-[2px] border-[var(--ink)] bg-white px-3 py-1 text-center text-xs font-bold">
+                      {members} member{members === 1 ? "" : "s"}
+                    </p>
+                  </div>
                 </div>
               </Link>
-              <div className="flex items-center justify-center gap-2 px-5 pb-5">
+              <div className="flex flex-wrap items-center justify-center gap-2 px-5 pb-5">
                 {society.instagram_url && (
                   <a
                     href={society.instagram_url}
@@ -132,6 +156,15 @@ export default async function CommunitiesPage() {
                 >
                   View Society
                 </Link>
+                {fromDb && (
+                  <JoinCommunityButton
+                    societyId={society.id}
+                    societySlug={society.slug}
+                    isLoggedIn={Boolean(user)}
+                    initiallyJoined={joinedIds.has(society.id)}
+                    size="sm"
+                  />
+                )}
               </div>
             </article>
           );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   createEventAction,
@@ -8,7 +8,7 @@ import {
   updateSocietyAction,
 } from "@/app/admin/actions";
 import { EventRecapEditor } from "@/components/admin/EventRecapEditor";
-import type { EventRegistration, EventRow, Society } from "@/lib/types";
+import type { EventRegistration, EventRow, Profile, Society } from "@/lib/types";
 import { isEventCompleted, publicStorageUrl } from "@/lib/types";
 
 type Stats = {
@@ -17,16 +17,52 @@ type Stats = {
   registrations: number;
 };
 
+type RegistrationRow = EventRegistration & {
+  events?: { id: string; title: string } | null;
+};
+
 type Props = {
   societies: Society[];
   events: EventRow[];
-  registrations: (EventRegistration & {
-    events?: { id: string; title: string } | null;
-  })[];
+  registrations: RegistrationRow[];
   stats: Stats;
 };
 
 const TABS = ["dashboard", "societies", "events", "registrants"] as const;
+
+function ProfileFields({
+  profile,
+}: {
+  profile?: Pick<
+    Profile,
+    "full_name" | "enrollment_no" | "batch" | "course" | "year"
+  > | null;
+}) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+      <div>
+        <dt className="text-xs font-bold text-[var(--ink-soft)]">Full name</dt>
+        <dd className="font-semibold">{profile?.full_name || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-bold text-[var(--ink-soft)]">Student ID</dt>
+        <dd className="font-semibold">{profile?.enrollment_no || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-bold text-[var(--ink-soft)]">Batch</dt>
+        <dd className="font-semibold">{profile?.batch || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-bold text-[var(--ink-soft)]">Course</dt>
+        <dd className="font-semibold">{profile?.course || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-bold text-[var(--ink-soft)]">Year</dt>
+        <dd className="font-semibold">{profile?.year || "—"}</dd>
+      </div>
+    </dl>
+  );
+}
 
 export function AdminPanel({
   societies,
@@ -37,6 +73,17 @@ export function AdminPanel({
   const [tab, setTab] = useState<(typeof TABS)[number]>("dashboard");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [openRegistrantId, setOpenRegistrantId] = useState<string | null>(null);
+
+  const regsByEvent = useMemo(() => {
+    const map = new Map<string, RegistrationRow[]>();
+    for (const r of registrations) {
+      const list = map.get(r.event_id) ?? [];
+      list.push(r);
+      map.set(r.event_id, list);
+    }
+    return map;
+  }, [registrations]);
 
   function run(
     action: (fd: FormData) => Promise<{ error: string | null }>,
@@ -118,21 +165,10 @@ export function AdminPanel({
                 "society-logos",
                 society.logo_path,
               );
+
               return (
-                <form
-                  key={society.id}
-                  className="cute-card p-6"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    run(
-                      updateSocietyAction,
-                      new FormData(e.currentTarget),
-                      `${society.name} updated.`,
-                    );
-                  }}
-                >
-                  <input type="hidden" name="id" value={society.id} />
-                  <div className="mb-4 flex items-center gap-4">
+                <div key={society.id} className="cute-card overflow-hidden">
+                  <div className="flex items-center gap-4 p-6">
                     <div
                       className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border-[2.5px] border-[var(--ink)]"
                       style={{ background: society.soft ?? "#fff" }}
@@ -153,7 +189,7 @@ export function AdminPanel({
                         </span>
                       )}
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--rose-deep)]">
                         {society.name}
                       </h2>
@@ -163,75 +199,88 @@ export function AdminPanel({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="flex flex-col gap-1 text-sm font-bold">
-                      President name
-                      <input
-                        name="president_name"
-                        defaultValue={society.president_name ?? "President"}
-                        className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm font-bold">
-                      Vice president name
-                      <input
-                        name="vice_president_name"
-                        defaultValue={
-                          society.vice_president_name ?? "Vice President"
-                        }
-                        className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm font-bold">
-                      Instagram URL
-                      <input
-                        name="instagram_url"
-                        type="url"
-                        placeholder="https://instagram.com/…"
-                        defaultValue={society.instagram_url ?? ""}
-                        className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm font-bold">
-                      LinkedIn URL
-                      <input
-                        name="linkedin_url"
-                        type="url"
-                        placeholder="https://linkedin.com/…"
-                        defaultValue={society.linkedin_url ?? ""}
-                        className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="mt-4 flex flex-col gap-1 text-sm font-bold">
-                    Description
-                    <textarea
-                      name="description"
-                      rows={3}
-                      defaultValue={society.description ?? ""}
-                      className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
-                    />
-                  </label>
-
-                  <label className="mt-4 flex flex-col gap-1 text-sm font-bold">
-                    Upload logo
-                    <input
-                      type="file"
-                      name="logo"
-                      accept="image/*"
-                      className="text-sm font-normal"
-                    />
-                  </label>
-
-                  <button
-                    type="submit"
-                    disabled={pending}
-                    className="cute-btn mt-4"
+                  <form
+                    className="border-t-[2px] border-[var(--ink)]/15 p-6"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      run(
+                        updateSocietyAction,
+                        new FormData(e.currentTarget),
+                        `${society.name} updated.`,
+                      );
+                    }}
                   >
-                    {pending ? "Saving…" : "Save society"}
-                  </button>
-                </form>
+                    <input type="hidden" name="id" value={society.id} />
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="flex flex-col gap-1 text-sm font-bold">
+                        President name
+                        <input
+                          name="president_name"
+                          defaultValue={society.president_name ?? "President"}
+                          className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm font-bold">
+                        Vice president name
+                        <input
+                          name="vice_president_name"
+                          defaultValue={
+                            society.vice_president_name ?? "Vice President"
+                          }
+                          className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm font-bold">
+                        Instagram URL
+                        <input
+                          name="instagram_url"
+                          type="url"
+                          placeholder="https://instagram.com/…"
+                          defaultValue={society.instagram_url ?? ""}
+                          className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm font-bold">
+                        LinkedIn URL
+                        <input
+                          name="linkedin_url"
+                          type="url"
+                          placeholder="https://linkedin.com/…"
+                          defaultValue={society.linkedin_url ?? ""}
+                          className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
+                        />
+                      </label>
+                    </div>
+
+                    <label className="mt-4 flex flex-col gap-1 text-sm font-bold">
+                      Description
+                      <textarea
+                        name="description"
+                        rows={3}
+                        defaultValue={society.description ?? ""}
+                        className="rounded-2xl border-[2.5px] border-[var(--ink)] px-3 py-2 font-normal"
+                      />
+                    </label>
+
+                    <label className="mt-4 flex flex-col gap-1 text-sm font-bold">
+                      Upload logo
+                      <input
+                        type="file"
+                        name="logo"
+                        accept="image/*"
+                        className="text-sm font-normal"
+                      />
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={pending}
+                      className="cute-btn mt-4"
+                    >
+                      {pending ? "Saving…" : "Save society"}
+                    </button>
+                  </form>
+                </div>
               );
             })}
           </motion.div>
@@ -349,13 +398,15 @@ export function AdminPanel({
                   event.banner_path,
                 );
                 const past = isEventCompleted(event.starts_at);
+                const eventRegs = regsByEvent.get(event.id) ?? [];
+
                 return (
                   <div
                     key={event.id}
-                    className="cute-card flex flex-col gap-0 p-4"
+                    className="cute-card flex flex-col gap-0 overflow-hidden p-4"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="h-16 w-24 overflow-hidden rounded-xl border-[2px] border-[var(--ink)] bg-[var(--sidebar)]">
+                      <div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl border-[2px] border-[var(--ink)] bg-[var(--sidebar)]">
                         {bannerUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -366,7 +417,9 @@ export function AdminPanel({
                         ) : null}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-extrabold">{event.title}</p>
+                        <p className="font-extrabold text-[var(--rose-deep)]">
+                          {event.title}
+                        </p>
                         <p className="text-xs text-[var(--ink-soft)]">
                           {event.societies?.name ?? "Society"} ·{" "}
                           {new Date(event.starts_at).toLocaleString()}
@@ -375,6 +428,10 @@ export function AdminPanel({
                             : ""}
                           {past ? " · past" : ""}
                           {event.recap_description ? " · recap live" : ""}
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-[var(--ink)]">
+                          {eventRegs.length} registrant
+                          {eventRegs.length === 1 ? "" : "s"}
                         </p>
                       </div>
                       <form
@@ -395,6 +452,36 @@ export function AdminPanel({
                           Delete
                         </button>
                       </form>
+                    </div>
+
+                    <div className="mt-3 rounded-2xl border-[2px] border-[var(--ink)]/20 bg-[var(--sidebar)] px-4 py-3">
+                      <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-soft)]">
+                        Registrants
+                      </p>
+                      {eventRegs.length === 0 ? (
+                        <p className="text-sm text-[var(--ink-soft)]">
+                          No one has registered for this event yet.
+                        </p>
+                      ) : (
+                        <ul className="flex flex-col gap-2">
+                          {eventRegs.map((r) => (
+                            <li
+                              key={r.id}
+                              className="rounded-2xl border-[2px] border-[var(--ink)] bg-white px-4 py-3"
+                            >
+                              <div className="mb-2 flex items-center justify-between gap-2">
+                                <p className="font-extrabold">
+                                  {r.profiles?.full_name || "Student"}
+                                </p>
+                                <p className="text-xs text-[var(--ink-soft)]">
+                                  {new Date(r.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                              <ProfileFields profile={r.profiles} />
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
 
                     {past && (
@@ -428,25 +515,63 @@ export function AdminPanel({
               </p>
             ) : (
               <ul className="mt-4 flex flex-col gap-2">
-                {registrations.map((r) => (
-                  <li
-                    key={r.id}
-                    className="flex items-center justify-between rounded-2xl border-[2px] border-[var(--ink)] bg-white px-4 py-3 text-sm"
-                  >
-                    <div>
-                      <p className="font-extrabold">
-                        {r.profiles?.full_name || "Student"}
-                      </p>
-                      <p className="text-xs text-[var(--ink-soft)]">
-                        {r.events?.title ?? "Event"} · user{" "}
-                        {r.user_id.slice(0, 8)}…
-                      </p>
-                    </div>
-                    <p className="text-xs text-[var(--ink-soft)]">
-                      {new Date(r.created_at).toLocaleString()}
-                    </p>
-                  </li>
-                ))}
+                {registrations.map((r) => {
+                  const open = openRegistrantId === r.id;
+                  const profile = r.profiles;
+                  return (
+                    <li
+                      key={r.id}
+                      className="rounded-2xl border-[2px] border-[var(--ink)] bg-white text-sm"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenRegistrantId(open ? null : r.id)
+                        }
+                        className="flex w-full items-center justify-between px-4 py-3 text-left"
+                      >
+                        <div>
+                          <p className="font-extrabold text-[var(--rose-deep)] underline-offset-2 hover:underline">
+                            {profile?.full_name || "Student"}
+                          </p>
+                          <p className="text-xs text-[var(--ink-soft)]">
+                            {r.events?.title ?? "Event"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <p className="text-xs text-[var(--ink-soft)]">
+                            {new Date(r.created_at).toLocaleString()}
+                          </p>
+                          <span className="text-xs font-extrabold text-[var(--rose-deep)]">
+                            {open ? "▲" : "▼"}
+                          </span>
+                        </div>
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {open && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="border-t-[2px] border-[var(--ink)]/15 bg-[var(--sidebar)] px-4 py-3">
+                              <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-soft)]">
+                                Student details
+                              </p>
+                              <ProfileFields profile={profile} />
+                              <p className="mt-2 text-xs text-[var(--ink-soft)]">
+                                Event: {r.events?.title ?? "—"}
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </motion.div>

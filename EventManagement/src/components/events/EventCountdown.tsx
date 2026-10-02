@@ -17,12 +17,39 @@ function parts(ms: number) {
 }
 
 export function EventCountdown({ startsAt }: Props) {
-  const [now, setNow] = useState(() => Date.now());
+  // Avoid Date.now() during SSR — it causes hydration mismatches vs the client.
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  if (now === null) {
+    return (
+      <div className="cute-card mt-4 p-4">
+        <p className="mb-3 text-center text-sm font-bold text-[var(--ink-soft)]">
+          Starts in
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          {["Days", "Hours", "Mins", "Secs"].map((label) => (
+            <div
+              key={label}
+              className="rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--sidebar)] py-3 text-center"
+            >
+              <p className="font-[family-name:var(--font-display)] text-2xl text-[var(--rose-deep)]">
+                --
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const t = parts(new Date(startsAt).getTime() - now);
 

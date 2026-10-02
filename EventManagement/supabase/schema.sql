@@ -114,6 +114,19 @@ create table if not exists public.event_registrations (
   unique (event_id, user_id)
 );
 
+-- Prefer profiles FK so PostgREST can embed profiles(...) from registrations.
+-- profiles.id already references auth.users, so cascade still applies.
+do $$
+begin
+  alter table public.event_registrations
+    drop constraint if exists event_registrations_user_id_fkey;
+  alter table public.event_registrations
+    add constraint event_registrations_user_id_fkey
+    foreign key (user_id) references public.profiles (id) on delete cascade;
+exception
+  when others then null;
+end $$;
+
 alter table public.event_registrations enable row level security;
 
 create policy "Users see own registrations"

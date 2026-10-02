@@ -4,12 +4,14 @@ import {
   PresidentCharacter,
   VicePresidentCharacter,
 } from "@/components/characters/LeaderPlaceholders";
+import { JoinCommunityButton } from "@/components/communities/JoinCommunityButton";
 import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
 import { getSociety } from "@/lib/societies";
 import { createClient } from "@/lib/supabase/server";
 import {
   isEventCompleted,
   publicStorageUrl,
+  societyMemberTotal,
   type EventRow,
   type Society,
 } from "@/lib/types";
@@ -19,6 +21,9 @@ type Props = { params: Promise<{ slug: string }> };
 export default async function SocietyDetailPage({ params }: Props) {
   const { slug } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: dbSociety } = await supabase
     .from("societies")
@@ -52,13 +57,59 @@ export default async function SocietyDetailPage({ params }: Props) {
   const logoUrl = publicStorageUrl("society-logos", society.logo_path);
 
   let events: EventRow[] = [];
+  let memberCount = 0;
+  let initiallyJoined = false;
+  let members: {
+    id: string;
+    user_id: string;
+    joined_at: string;
+    full_name: string | null;
+  }[] = [];
+
   if (dbSociety) {
-    const { data } = await supabase
-      .from("events")
-      .select("*")
-      .eq("society_id", society.id)
-      .order("starts_at", { ascending: true });
+    const [{ data }, { data: memberRows }, membership] = await Promise.all([
+      supabase
+        .from("events")
+        .select("*")
+        .eq("society_id", society.id)
+        .order("starts_at", { ascending: true }),
+      supabase
+        .from("society_members")
+        .select("id, user_id, joined_at")
+        .eq("society_id", society.id)
+        .order("joined_at", { ascending: true }),
+      user
+        ? supabase
+            .from("society_members")
+            .select("id")
+            .eq("society_id", society.id)
+            .eq("user_id", user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
     events = (data as EventRow[]) ?? [];
+    const rows = memberRows ?? [];
+    memberCount = societyMemberTotal(rows.length);
+    initiallyJoined = Boolean(membership.data);
+
+    if (rows.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in(
+          "id",
+          rows.map((m) => m.user_id),
+        );
+      const nameById = new Map(
+        (profiles ?? []).map((p) => [p.id, p.full_name] as const),
+      );
+      members = rows.map((m) => ({
+        id: m.id,
+        user_id: m.user_id,
+        joined_at: m.joined_at,
+        full_name: nameById.get(m.user_id) ?? null,
+      }));
+    }
   }
 
   return (
@@ -92,9 +143,24 @@ export default async function SocietyDetailPage({ params }: Props) {
           <p className="mt-2 max-w-2xl text-[var(--ink-soft)]">
             {society.description}
           </p>
-          <p className="mt-4 inline-block rounded-full border-[2px] border-[var(--ink)] bg-white px-4 py-1 text-xs font-bold">
-            {events.length} event{events.length === 1 ? "" : "s"} hosted
-          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <p className="inline-block rounded-full border-[2px] border-[var(--ink)] bg-white px-4 py-1 text-xs font-bold">
+              {events.length} event{events.length === 1 ? "" : "s"} hosted
+            </p>
+            <p className="inline-block rounded-full border-[2px] border-[var(--ink)] bg-white px-4 py-1 text-xs font-bold">
+              {memberCount} member{memberCount === 1 ? "" : "s"}
+            </p>
+          </div>
+          {dbSociety && (
+            <div className="mt-4">
+              <JoinCommunityButton
+                societyId={society.id}
+                societySlug={society.slug}
+                isLoggedIn={Boolean(user)}
+                initiallyJoined={initiallyJoined}
+              />
+            </div>
+          )}
           <div className="mt-3 flex gap-2">
             {society.instagram_url && (
               <a
@@ -157,6 +223,52 @@ export default async function SocietyDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      <section className="cute-card mt-6 p-6">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--rose-deep)]">
+          Members
+        </h2>
+        <p className="mt-1 text-sm text-[var(--ink-soft)]">
+          {memberCount} member{memberCount === 1 ? "" : "s"} including club
+          leads
+        </p>
+        <ul className="mt-4 flex flex-col gap-2">
+          <li className="rounded-2xl border-[2px] border-[var(--ink)] bg-white px-4 py-3">
+            <p className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--rose-deep)]">
+              President
+            </p>
+            <p className="font-extrabold">
+              {society.president_name ?? "President"}
+            </p>
+          </li>
+          <li className="rounded-2xl border-[2px] border-[var(--ink)] bg-white px-4 py-3">
+            <p className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--rose-deep)]">
+              Vice President
+            </p>
+            <p className="font-extrabold">
+              {society.vice_president_name ?? "Vice President"}
+            </p>
+          </li>
+          {members.length === 0 ? (
+            <li className="px-1 text-sm text-[var(--ink-soft)]">
+              No students have joined yet. Be the first!
+            </li>
+          ) : (
+            members.map((m) => (
+              <li
+                key={m.id}
+                className="rounded-2xl border-[2px] border-[var(--ink)] bg-white px-4 py-3"
+              >
+                <p className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-soft)]">
+                  Member · joined{" "}
+                  {new Date(m.joined_at).toLocaleDateString()}
+                </p>
+                <p className="font-extrabold">{m.full_name || "Student"}</p>
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
 
       <section className="cute-card mt-6 p-6">
         <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--rose-deep)]">

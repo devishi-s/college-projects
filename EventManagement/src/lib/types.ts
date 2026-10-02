@@ -2,6 +2,11 @@ export type Profile = {
   id: string;
   full_name: string | null;
   is_admin: boolean;
+  enrollment_no?: string | null;
+  batch?: string | null;
+  course?: string | null;
+  year?: string | null;
+  profile_completed?: boolean;
 };
 
 export type Society = {
@@ -46,8 +51,23 @@ export type EventRegistration = {
   event_id: string;
   user_id: string;
   created_at: string;
-  profiles?: Pick<Profile, "id" | "full_name"> | null;
+  profiles?: Pick<
+    Profile,
+    "id" | "full_name" | "enrollment_no" | "batch" | "course" | "year"
+  > | null;
 };
+
+export type SocietyMember = {
+  id: string;
+  society_id: string;
+  user_id: string;
+  joined_at: string;
+  societies?: Pick<
+    Society,
+    "id" | "slug" | "name" | "logo_path" | "soft" | "deep" | "accent"
+  > | null;
+};
+
 
 export function publicStorageUrl(
   bucket: string,
@@ -72,4 +92,9 @@ export function hasRecap(
     Boolean(event.recap_description?.trim()) &&
     isEventCompleted(event.starts_at)
   );
+}
+
+/** Live joiners + president & vice president (always counted as members). */
+export function societyMemberTotal(joinedCount: number) {
+  return Math.max(0, joinedCount) + 2;
 }

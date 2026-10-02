@@ -5,17 +5,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 
-const NAV = [
-  { href: "/", label: "Home" },
-  { href: "/communities", label: "Communities" },
-  { href: "/events", label: "Events" },
-  { href: "/feed", label: "Feed" },
-  { href: "/admin", label: "Admin" },
-  { href: "/login", label: "Login" },
-];
+type Props = {
+  isLoggedIn: boolean;
+  isAdmin: boolean;
+};
 
-export function Sidebar() {
+export function Sidebar({ isLoggedIn, isAdmin }: Props) {
   const pathname = usePathname();
+
+  const nav = [
+    { href: "/", label: "Home" },
+    { href: "/communities", label: "Communities" },
+    { href: "/events", label: "Events" },
+    { href: "/feed", label: "Feed" },
+    ...(isLoggedIn && !isAdmin
+      ? [{ href: "/dashboard", label: "Dashboard" }]
+      : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+  ];
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r-[3px] border-[var(--ink)] bg-[var(--sidebar)] px-5 py-8">
@@ -39,7 +46,7 @@ export function Sidebar() {
       </Link>
 
       <nav className="flex flex-1 flex-col gap-2">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const active =
             item.href === "/"
               ? pathname === "/"
